@@ -7,11 +7,12 @@ var connection = new signalR.HubConnectionBuilder().withUrl("/WebRTCHub").build(
 ****************************************************************************/
 
 const configuration = {
-   'iceServers': [{
-     'urls': 'stun:stun.l.google.com:19302'
-   }]
- };
-const peerConn = new RTCPeerConnection(configuration);
+    'iceServers': [{
+        'urls': 'stun:stun.l.google.com:19302'
+    }]
+};
+let peerConn;
+peerConn = new RTCPeerConnection(configuration);
 
 const roomNameTxt = document.getElementById('roomNameTxt');
 const createRoomBtn = document.getElementById('createRoomBtn');
@@ -46,9 +47,6 @@ $(roomTable).DataTable({
     }
 });
 
-//setup my video here.
-grabWebCamVideo();
-
 /****************************************************************************
 * Signaling server
 ****************************************************************************/
@@ -69,6 +67,8 @@ connection.start().then(function () {
         connectionStatusMessage.innerText = 'You created Room ' + roomId + '. Waiting for participants...';
         myRoomId = roomId;
         isInitiator = true;
+
+        grabWebCamVideo();
     });
 
     connection.on('joined', function (roomId) {
