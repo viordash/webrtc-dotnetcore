@@ -18,9 +18,6 @@ const roomNameTxt = document.getElementById('roomNameTxt');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const roomTable = document.getElementById('roomTable');
 const connectionStatusMessage = document.getElementById('connectionStatusMessage');
-const fileInput = document.getElementById('fileInput');
-const sendFileBtn = document.getElementById('sendFileBtn');
-const fileTable = document.getElementById('fileTable');
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 
@@ -151,20 +148,6 @@ $('#roomTable tbody').on('click', 'button', function () {
     }
 });
 
-$(fileInput).change(function () {
-    let file = fileInput.files[0];
-    if (file) {
-        sendFileBtn.disabled = false;
-    } else {
-        sendFileBtn.disabled = true;
-    }
-});
-
-$(sendFileBtn).click(function () {
-    sendFileBtn.disabled = true;
-    sendFile();
-});
-
 /****************************************************************************
 * User media (webcam)
 ****************************************************************************/
@@ -191,8 +174,6 @@ function gotStream(stream) {
 /****************************************************************************
 * WebRTC peer connection and data channel
 ****************************************************************************/
-
-var dataChannel;
 
 function signalingMessageCallback(message) {
     if (message.type === 'offer') {
@@ -244,19 +225,9 @@ function createPeerConnection(isInitiator, config) {
     };
 
     if (isInitiator) {
-        console.log('Creating Data Channel');
-        dataChannel = peerConn.createDataChannel('sendDataChannel');
-        onDataChannelCreated(dataChannel);
-
         console.log('Creating an offer');
         peerConn.createOffer(onLocalSessionCreated, logError);
-    } else {
-        peerConn.ondatachannel = function (event) {
-            console.log('ondatachannel:', event.channel);
-            dataChannel = event.channel;
-            onDataChannelCreated(dataChannel);
-        };
-    }
+    } 
 }
 
 function onLocalSessionCreated(desc) {
@@ -268,89 +239,7 @@ function onLocalSessionCreated(desc) {
     }, logError);
 }
 
-function onDataChannelCreated(channel) {
-    console.log('onDataChannelCreated:', channel);
 
-    channel.onopen = function () {
-        console.log('Channel opened!!!');
-        connectionStatusMessage.innerText = 'Channel opened!!';
-        fileInput.disabled = false;
-    };
-
-    channel.onclose = function () {
-        console.log('Channel closed.');
-        connectionStatusMessage.innerText = 'Channel closed.';
-    }
-
-    channel.onmessage = onReceiveMessageCallback();
-}
-
-function onReceiveMessageCallback() {
-    let count;
-    let fileSize, fileName;
-    let receiveBuffer = [];
-
-    return function onmessage(event) {
-        if (typeof event.data === 'string') {
-            const fileMetaInfo = event.data.split(',');
-            fileSize = parseInt(fileMetaInfo[0]);
-            fileName = fileMetaInfo[1];
-            count = 0;
-            return;
-        }
-
-        receiveBuffer.push(event.data);
-        count += event.data.byteLength;
-
-        if (fileSize === count) {
-            // all data chunks have been received
-            const received = new Blob(receiveBuffer);
-            receiveBuffer = [];
-
-            $(fileTable).children('tbody').append('<tr><td><a></a></td></tr>');
-            const downloadAnchor = $(fileTable).find('a:last');
-            downloadAnchor.attr('href', URL.createObjectURL(received));
-            downloadAnchor.attr('download', fileName);
-            downloadAnchor.text(`${fileName} (${fileSize} bytes)`);
-        }
-    };
-}
-
-function sendFile() {
-    const file = fileInput.files[0];
-    console.log(`File is ${[file.name, file.size, file.type, file.lastModified].join(' ')}`);
-
-    if (file.size === 0) {
-        alert('File is empty, please select a non-empty file.');
-        return;
-    }
-
-    //send file size and file name as comma separated value.
-    dataChannel.send(file.size + ',' + file.name);
-
-    const chunkSize = 16384;
-    fileReader = new FileReader();
-    let offset = 0;
-    fileReader.addEventListener('error', error => console.error('Error reading file:', error));
-    fileReader.addEventListener('abort', event => console.log('File reading aborted:', event));
-    fileReader.addEventListener('load', e => {
-        console.log('FileRead.onload ', e);
-        dataChannel.send(e.target.result);
-        offset += e.target.result.byteLength;
-        if (offset < file.size) {
-            readSlice(offset);
-        } else {
-            alert(`${file.name} has been sent successfully.`);
-            sendFileBtn.disabled = false;
-        }
-    });
-    const readSlice = o => {
-        console.log('readSlice ', o);
-        const slice = file.slice(offset, o + chunkSize);
-        fileReader.readAsArrayBuffer(slice);
-    };
-    readSlice(0);
-}
 
 /****************************************************************************
 * Auxiliary functions
