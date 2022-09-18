@@ -25,14 +25,16 @@ namespace webrtc_dotnetcore.Hubs
             return base.OnDisconnectedAsync(exception);
         }
 
-        public async Task CreateRoom(string name)
+        public async Task CreateRoom(string data)
         {
-            RoomInfo roomInfo = roomManager.CreateRoom(Context.ConnectionId, name);
+
+            var obj = JsonConvert.DeserializeObject<RoomData>(data);
+            RoomInfo roomInfo = roomManager.CreateRoom(Context.ConnectionId, obj.name, obj.stunAddress, obj.stunUsername, obj.stunPassword);
             if (roomInfo != null)
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, roomInfo.RoomId);
-                await Clients.Caller.SendAsync("created", roomInfo.RoomId);
                 await NotifyRoomInfoAsync(false);
+                await Clients.Caller.SendAsync("created", roomInfo.RoomId);
             }
             else
             {
@@ -43,6 +45,7 @@ namespace webrtc_dotnetcore.Hubs
         public async Task Join(string roomId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+
             await Clients.Caller.SendAsync("joined", roomId);
             await Clients.Group(roomId).SendAsync("ready");
 
@@ -77,6 +80,9 @@ namespace webrtc_dotnetcore.Hubs
                        {
                            RoomId = room.RoomId,
                            Name = room.Name,
+                           StunAddress = room.StunAddress,
+                           StunUsername = room.StunUsername,
+                           StunPassword = room.StunPassword,
                            Button = "<button class=\"joinButton\">Join!</button>"
                        };
             var data = JsonConvert.SerializeObject(list);
@@ -109,7 +115,7 @@ namespace webrtc_dotnetcore.Hubs
             rooms = new ConcurrentDictionary<int, RoomInfo>();
         }
 
-        public RoomInfo CreateRoom(string connectionId, string name)
+        public RoomInfo CreateRoom(string connectionId, string name, string stunAddress, string stunUsername, string stunPassword)
         {
             rooms.TryRemove(nextRoomId, out _);
 
@@ -118,6 +124,9 @@ namespace webrtc_dotnetcore.Hubs
             {
                 RoomId = nextRoomId.ToString(),
                 Name = name,
+                StunAddress = stunAddress,
+                StunUsername = stunUsername,
+                StunPassword = stunPassword,
                 HostConnectionId = connectionId
             };
             bool result = rooms.TryAdd(nextRoomId, roomInfo);
@@ -165,6 +174,16 @@ namespace webrtc_dotnetcore.Hubs
     {
         public string RoomId { get; set; }
         public string Name { get; set; }
+        public string StunAddress { get; set; }
+        public string StunUsername { get; set; }
+        public string StunPassword { get; set; }
         public string HostConnectionId { get; set; }
+    }
+
+    public class RoomData{
+        public string name { get; set; }
+        public string stunAddress { get; set; }
+        public string stunUsername { get; set; }
+        public string stunPassword { get; set; }
     }
 }

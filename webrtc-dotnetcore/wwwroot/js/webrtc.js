@@ -15,6 +15,9 @@ let peerConn;
 peerConn = new RTCPeerConnection(configuration);
 
 const roomNameTxt = document.getElementById('roomNameTxt');
+const edStunAddress = document.getElementById('edStunAddress');
+const edStunUsername = document.getElementById('edStunUsername');
+const edStunPassword = document.getElementById('edStunPassword');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const roomTable = document.getElementById('roomTable');
 const connectionStatusMessage = document.getElementById('connectionStatusMessage');
@@ -22,20 +25,22 @@ const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 
 let myRoomId;
+let myStunAddress;
+let myStunUsername;
+let myStunPassword;
 let localStream;
 let remoteStream;
-let fileReader;
 let isInitiator = false;
 let hasRoomJoined = false;
 
-fileInput.disabled = true;
-sendFileBtn.disabled = true;
 
 $(roomTable).DataTable({
     columns: [
-        { data: 'RoomId', "width": "30%" },
-        { data: 'Name', "width": "50%" },
-        { data: 'Button', "width": "15%" }
+        { data: 'RoomId', "width": "5%" },
+        { data: 'Name', "width": "30%" },
+        { data: 'StunAddress', "width": "50%" },
+        { data: 'StunUsername', "width": "5%" },
+        { data: 'Button', "width": "10%" }
     ],
     "lengthChange": false,
     "searching": false,
@@ -59,10 +64,18 @@ connection.start().then(function () {
     connection.on('created', function (roomId) {
         console.log('Created room', roomId);
         roomNameTxt.disabled = true;
+        edStunAddress.disabled = true;
+        edStunUsername.disabled = true;
+        edStunPassword.disabled = true;
         createRoomBtn.disabled = true;
         hasRoomJoined = true;
         connectionStatusMessage.innerText = 'You created Room ' + roomId + '. Waiting for participants...';
         myRoomId = roomId;
+        var data = $(roomTable).DataTable().data().filter((item, index) => item.RoomId === roomId)[0];
+        myStunAddress = data.StunAddress;
+        myStunUsername = data.StunUsername;
+        myStunPassword = data.StunPassword;
+
         isInitiator = true;
 
         grabWebCamVideo();
@@ -71,6 +84,12 @@ connection.start().then(function () {
     connection.on('joined', function (roomId) {
         console.log('This peer has joined room', roomId);
         myRoomId = roomId;
+
+        var data = $(roomTable).DataTable().data().filter((item, index) => item.RoomId === roomId)[0];        
+        myStunAddress = data.StunAddress;
+        myStunUsername = data.StunUsername;
+        myStunPassword = data.StunPassword;
+
         isInitiator = false;
     });
 
@@ -81,6 +100,9 @@ connection.start().then(function () {
     connection.on('ready', function () {
         console.log('Socket is ready');
         roomNameTxt.disabled = true;
+        edStunAddress.disabled = true;
+        edStunUsername.disabled = true;
+        edStunPassword.disabled = true;
         createRoomBtn.disabled = true;
         hasRoomJoined = true;
         connectionStatusMessage.innerText = 'Connecting...';
@@ -132,7 +154,17 @@ function sendMessage(message) {
 
 $(createRoomBtn).click(function () {
     var name = roomNameTxt.value;
-    connection.invoke("CreateRoom", name).catch(function (err) {
+    var stunAddress = edStunAddress.value;
+    var stunUsername = edStunUsername.value;
+    var stunPassword = edStunPassword.value;
+    var json = JSON.stringify({
+        name: name,
+        stunAddress: stunAddress,
+        stunUsername: stunUsername,
+        stunPassword: stunPassword
+    });
+    connection.invoke("CreateRoom", json
+    ).catch(function (err) {
         return console.error(err.toString());
     });
 });
