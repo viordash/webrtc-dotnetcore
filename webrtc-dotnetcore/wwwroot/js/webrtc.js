@@ -281,6 +281,10 @@ function createPeerConnection(isInitiator) {
         }
     };
 
+    peerConn.onicecandidateerror = function (event) {
+        console.warn('icecandidateerror event:', event);
+    }
+
     peerConn.ontrack = function (event) {
         console.log('icecandidate ontrack event:', event);
         remoteVideo.srcObject = event.streams[0];
