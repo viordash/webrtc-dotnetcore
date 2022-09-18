@@ -6,13 +6,7 @@ var connection = new signalR.HubConnectionBuilder().withUrl("/WebRTCHub").build(
 * Initial setup
 ****************************************************************************/
 
-const configuration = {
-    'iceServers': [{
-        'urls': 'stun:stun.l.google.com:19302'
-    }]
-};
 let peerConn;
-peerConn = new RTCPeerConnection(configuration);
 
 const roomNameTxt = document.getElementById('roomNameTxt');
 const edStunAddress = document.getElementById('edStunAddress');
@@ -76,6 +70,25 @@ connection.start().then(function () {
         myStunUsername = data.StunUsername;
         myStunPassword = data.StunPassword;
 
+        if (myStunUsername?.length > 0) {
+            const configuration = {
+                'iceServers': [{
+                    urls: myStunAddress,
+                    username: myStunUsername,
+                    credential: myStunPassword
+                }]
+            };
+            peerConn = new RTCPeerConnection(configuration);
+        } else {
+            const configuration = {
+                'iceServers': [{
+                    'urls': myStunAddress
+                }]
+            };
+            peerConn = new RTCPeerConnection(configuration);
+        }
+
+
         isInitiator = true;
 
         grabWebCamVideo();
@@ -85,10 +98,28 @@ connection.start().then(function () {
         console.log('This peer has joined room', roomId);
         myRoomId = roomId;
 
-        var data = $(roomTable).DataTable().data().filter((item, index) => item.RoomId === roomId)[0];        
+        var data = $(roomTable).DataTable().data().filter((item, index) => item.RoomId === roomId)[0];
         myStunAddress = data.StunAddress;
         myStunUsername = data.StunUsername;
         myStunPassword = data.StunPassword;
+
+        if (myStunUsername?.length > 0) {
+            const configuration = {
+                'iceServers': [{
+                    urls: myStunAddress,
+                    username: myStunUsername,
+                    credential: myStunPassword
+                }]
+            };
+            peerConn = new RTCPeerConnection(configuration);
+        } else {
+            const configuration = {
+                'iceServers': [{
+                    'urls': myStunAddress
+                }]
+            };
+            peerConn = new RTCPeerConnection(configuration);
+        }
 
         isInitiator = false;
     });
@@ -106,7 +137,7 @@ connection.start().then(function () {
         createRoomBtn.disabled = true;
         hasRoomJoined = true;
         connectionStatusMessage.innerText = 'Connecting...';
-        createPeerConnection(isInitiator, configuration);
+        createPeerConnection(isInitiator);
     });
 
     connection.on('message', function (message) {
@@ -229,9 +260,8 @@ function signalingMessageCallback(message) {
     }
 }
 
-function createPeerConnection(isInitiator, config) {
-    console.log('Creating Peer connection as initiator?', isInitiator, 'config:',
-        config);
+function createPeerConnection(isInitiator) {
+    console.log('Creating Peer connection as initiator?', isInitiator);
 
     // send any ice candidates to the other peer
     peerConn.onicecandidate = function (event) {
@@ -259,7 +289,7 @@ function createPeerConnection(isInitiator, config) {
     if (isInitiator) {
         console.log('Creating an offer');
         peerConn.createOffer(onLocalSessionCreated, logError);
-    } 
+    }
 }
 
 function onLocalSessionCreated(desc) {
