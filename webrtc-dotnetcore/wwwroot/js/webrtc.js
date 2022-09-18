@@ -268,16 +268,16 @@ function createPeerConnection(isInitiator) {
         console.log('icecandidate event:', event);
         if (event.candidate) {
             // Trickle ICE
-            //sendMessage({
-            //    type: 'candidate',
-            //    label: event.candidate.sdpMLineIndex,
-            //    id: event.candidate.sdpMid,
-            //    candidate: event.candidate.candidate
-            //});
+            sendMessage({
+                type: 'candidate',
+                label: event.candidate.sdpMLineIndex,
+                id: event.candidate.sdpMid,
+                candidate: event.candidate.candidate
+            });
         } else {
             console.log('End of candidates.');
             // Vanilla ICE
-            sendMessage(peerConn.localDescription);
+            //sendMessage(peerConn.localDescription);
         }
     };
 
@@ -296,8 +296,8 @@ function onLocalSessionCreated(desc) {
     console.log('local session created:', desc);
     peerConn.setLocalDescription(desc, function () {
         // Trickle ICE
-        //console.log('sending local desc:', peerConn.localDescription);
-        //sendMessage(peerConn.localDescription);
+        console.log('sending local desc:', peerConn.localDescription);
+        sendMessage(peerConn.localDescription);
     }, logError);
 }
 
